@@ -1,0 +1,41 @@
+# mac specific files
+.DS_Store
+
+# ignore object files
+*.o
+
+# ignore executables
+test
+
+# ignore all scripts
+#*.sh
+
+# ignore swap files, wherever they occur
+**.swp
+
+# ignore all tarballs
+*.tar
+*.rar
+
+# ignore valgrind files
+*dSYM
+
+# ignore all text files
+#**.txt
+#**.dat
+#**.csv
+#**.edg
+#**.evt
+#**.rtf
+#**.edgeset
+#**.stats
+#**.time
+#**.edges
+#**.nodes
+
+# ignore figures and reports
+**.png
+**.pdf
+
+# ignore temporary backup files
+*.bak

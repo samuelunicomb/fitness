@@ -1,0 +1,268 @@
+#include <iostream>
+#include <random>
+#include <cassert>
+
+#include "variables.h"
+
+#include "graphdir.h"
+#include "fitness.h"
+
+using namespace std;
+
+memedata fitness::samplememepars(const double &t)
+{
+  memedata m;
+  m.popularity = 0;
+  m.abundance = 0;
+  m.birthtime = t;
+
+  gx = gdistwra(gen);
+  gy = gdistwrb(gen); 
+  m.wp = 1;
+  m.wr = gx / (gx + gy);
+  m.wb = 1;
+
+  cout << "doireann is sexy" << endl;
+
+  return m;
+}
+
+void fitness::initialiserng()
+{
+  wralpha = 1;
+  wrbeta = 1;
+  wbalpha = 1;
+  wbbeta = 1;
+
+  edist = exponential_distribution<double>(1);
+  udist = uniform_real_distribution<double>(0, 1);
+  gdistwra = gamma_distribution<double>(wralpha, 1);
+  gdistwrb = gamma_distribution<double>(wrbeta, 1);
+  gdistwba = gamma_distribution<double>(wbalpha, 1);
+  gdistwbb = gamma_distribution<double>(wbbeta, 1);
+}
+
+int main(int argc, char* argv[]) 
+{
+  srand(time(NULL));
+
+  g_argc = argc;
+  g_argv = argv;
+
+  double mu = 0.1;
+
+  fitness F;
+  F.initialiserng();
+  F.samplememepars(0.1);
+
+  int N = int(1e4);
+  double gamma = 2.5;
+  int kmin = 4;
+  pkpowerlaw pktmp{gamma, kmin, N};
+  graphdir G(topologydir{pktmp, pkpoisson{pktmp.z}}, N);
+  //graphdir G(topologydir{pktmp, pkregular{int(pktmp.z)}}, N);
+  //graphdir G(topologydir{pkregular{10}, pkpoisson{10}}, N);
+
+  mt19937 gen(random_device{}());
+  exponential_distribution<double> edist(1.0);
+  uniform_real_distribution<double> udist(0, 1.0);
+
+  double widthr = 3 / 3.0;  // TODO 0/3, 1/3, 2/3, 3/3
+  uniform_real_distribution<double> udistr((1 - mu) * (1 - widthr), (1 - mu) * (1 + widthr));
+
+  double covp = 0e3;        // TODO 1e0, 1e1, 1e2, 1e3, 1e4
+  double lnmean = mu;
+  double lnsdv = covp * lnmean;
+  double nmean = log(lnmean * lnmean / sqrt(lnmean * lnmean + lnsdv * lnsdv));
+  double nsdv = sqrt(log(1 + lnsdv * lnsdv / (lnmean * lnmean)));
+  lognormal_distribution<double> lndistp(nmean, nsdv);
+
+  double widthb = 3 / 3.0;  // TODO 0/3, 1/3, 2/3, 3/3
+  uniform_real_distribution<double> udistb(widthb, 1);
+
+  double alpha = 1.0;
+  double beta = 3.0; // 1, 0.5. 0.25, 0.125, 0.0625, 0.03125
+  double X, Y;
+  gamma_distribution<double> gdista(alpha, 1.0);
+  gamma_distribution<double> gdistb(beta, 1.0);
+
+  //struct memedata{
+  //  int popularity;  // number of retweets
+  //  int abundance;   // number of screens the meme is on
+  //  double birthtime;    // time of birth
+  //  double wp, wr, wb;  // fitness type; post, repost, breadth
+
+  //  memedata(){};
+
+  //  memedata(int p, int a, double b, double fp, double fr, double fb)
+  //    : popularity(p), abundance(a), birthtime(b), wp(fp), wr(fr), wb(fb) {}
+  //};
+
+  vector<memedata> memes(N);
+  for(int i = 0; i < N; ++i){
+    memes[i].popularity = 0;
+    memes[i].abundance = 1;
+    memes[i].birthtime = 0;
+    // TODO toggle, varying the reposting rate
+    //memes[i].wr = udistr(gen);
+    memes[i].wp = mu;
+    //memes[i].wr = 1 - mu;
+    X = gdista(gen); Y = gdistb(gen); memes[i].wr = X / (X + Y);
+    memes[i].wb = 1;
+    //X = gdista(gen); Y = gdistb(gen); memes[i].wb = X / (X + Y);
+    // TODO toggle, varying the posting rate
+    //memes[i].wp = lndistp(gen);
+    //memes[i].wr = 1 - mu;
+    //memes[i].wb = 1;
+    // TODO toggle, varying the breadth
+    //memes[i].wp = mu;
+    //memes[i].wr = 1 - mu;
+    //memes[i].wb = udist(gen) * udist(gen);
+    //memes[i].wb = udistb(gen);
+  }
+
+  double t = 0;
+  double dt, dtp, dtr;
+  int typetmp;
+
+  vector<int> screen(N);
+  set<event> events;
+  vector<event> nodeevents(N);
+  for(int i = 0; i < N; ++i){
+    screen[i] = i;
+
+    // function called "sampletimes", takes as input a memedata struct, and time t
+    dtp = 1e12;
+    if(memes[screen[i]].wp > 0) dtp = edist(gen) / memes[screen[i]].wp;
+    dtr = 1e12;
+    if(memes[screen[i]].wr > 0) dtr = edist(gen) / memes[screen[i]].wr;
+    dt = dtp < dtr ? dtp : dtr;
+    typetmp = dtp < dtr ? 0 : 1;
+
+    events.insert(event{i, typetmp, dt});
+    nodeevents[i] = event{i, typetmp, t + dt};
+  }
+
+  map<int, map<int, int>> agepopularitypmf;
+  int count = 0;
+  while(t < 10){
+    event e = *events.begin();
+    t = e.t;
+    int u = e.u;
+    
+    count += 1;
+
+    if(count % int(1 * N) == 0){
+      int a = 0;
+      for(unsigned int i = 0; i < memes.size(); ++i){
+        a += memes[i].abundance;
+      }
+
+      cerr << t << " ";
+      cerr << count / double(N) << " ";
+      cerr << events.size() << " ";
+      cerr << a << " ";
+      cerr << memes.size() << " ";
+      cerr << endl;
+    }
+
+    // overwrite ego's screen, but not those of neighbours yet
+    // memedata(popularity, abundance, birthtime, wp, wr, wb);
+    // FIXME you're starting of memes with an "abundance" of 2...
+    if(e.type == 0){
+      // TODO toggle reposting rate
+      //memedata m(0, 0, t, mu, udistr(gen), 1);
+      //memedata m(0, 0, t, mu, 1 - mu, 1);
+      //memedata m(0, 0, t, mu, udist(gen), 1);
+      X = gdista(gen); Y = gdistb(gen); memedata m(0, 0, t, mu, X / (X + Y), 1); ;
+      //memedata m(0, 0, t, mu, udist(gen), 1);
+      // TODO toggle posting rate
+      //memedata m(0, 0, t, lndistp(gen), 1 - mu, 1);
+      // TODO toggle breadth
+      //memedata m(0, 0, t, mu, 1 - mu, udistb(gen));
+      //memedata m(0, 0, t, mu, 1 - mu, udist(gen) * udist(gen));
+      //X = gdista(gen); Y = gdistb(gen); memedata m(0, 0, t, mu, 1 - mu, X / (X + Y)); ;
+
+      memes[screen[u]].abundance -= 1;
+      screen[u] = memes.size();
+      memes.push_back(m);
+      memes[screen[u]].abundance += 1;
+    }
+
+    events.erase(nodeevents[u]);
+    dtp = 1e12;
+    if(memes[screen[u]].wp > 0) dtp = edist(gen) / memes[screen[u]].wp;
+    dtr = 1e12;
+    if(memes[screen[u]].wr > 0) dtr = edist(gen) / memes[screen[u]].wr;
+    dt = dtp < dtr ? dtp : dtr;
+    typetmp = dtp < dtr ? 0 : 1;
+    nodeevents[u] = event{u, typetmp, t + dt};
+    events.insert(nodeevents[u]);
+
+    memes[screen[u]].popularity += 1;
+
+    for(unsigned int i = 0; i < G.network[u].size(); ++i){
+      //if(udist(gen) < memes[screen[u]].wb){ // TODO uncomment to study breadth
+      {
+        int v = G.network[u][i].nodeindex;
+        memes[screen[v]].abundance -= 1;
+        screen[v] = screen[u];
+        memes[screen[v]].abundance += 1;
+
+        events.erase(nodeevents[v]);
+        dtp = 1e12;
+        if(memes[screen[v]].wp > 0) dtp = edist(gen) / memes[screen[v]].wp;
+        dtr = 1e12;
+        if(memes[screen[v]].wr > 0) dtr = edist(gen) / memes[screen[v]].wr;
+        dt = dtp < dtr ? dtp : dtr;
+        typetmp = dtp < dtr ? 0 : 1;
+        nodeevents[v] = event{v, typetmp, t + dt};
+        events.insert(nodeevents[v]);
+      }
+    }
+  }
+
+  //int total = 0;
+  //int a = 10;
+  //for(auto it : agepopularitypmf[a])
+  //  total += it.second;
+
+  //map<int, double> agepopulatirycdf;
+  //double dummy = 0;
+  //for(auto it : agepopularitypmf[a]){
+  //  agepopulatirycdf[it.first] = dummy / total;
+  //  dummy += it.second;
+  //}
+
+  //for(auto it : agepopulatirycdf){
+  //  cout << it.first << " ";
+  //  cout << 1 - it.second << " ";
+  //  cout << endl;
+  //}
+
+  map<int, int> popularitypmf;
+  for(unsigned int i = 0; i < memes.size(); ++i){
+    if(memes[i].popularity > 0){
+      popularitypmf[memes[i].popularity] += 1;
+    }
+  }
+
+  int total = 0;
+  for(auto it : popularitypmf){
+    //cout << "pmf " << it.first << " " << it.second << endl;
+    total += it.second;
+  }
+
+  map<int, double> populatirycdf;
+  double dummy = 0;
+  for(auto it : popularitypmf){
+    populatirycdf[it.first] = dummy / total;
+    dummy += it.second;
+  }
+
+  for(auto it : populatirycdf){
+    cout << it.first << " ";
+    cout << 1 - it.second << " ";
+    cout << endl;
+  }
+}
