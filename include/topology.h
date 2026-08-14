@@ -42,8 +42,8 @@ class topology
     set<int> pksupport;
     map<int, double> pk;
 
-    vector<weight> wdist;                   // vector of weight, density pairs
-    vector<degree> kdist;                   // vector of degree, mass pairs
+    //vector<weight> wdist;                   // vector of weight, density pairs
+    //vector<degree> kdist;                   // vector of degree, mass pairs
 
     // sampling integers to form degree sequence
     void sampleregular(int, vector<int>&);

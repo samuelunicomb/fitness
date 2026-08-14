@@ -33,18 +33,18 @@ struct event // node event
 {
   event(){};
 
-  event(unsigned int a, double b){
+  event(unsigned long long int a, double b){
     u = a;
     t = b;
   }
 
-  event(unsigned int a, unsigned int b, double c){
+  event(unsigned long long int a, unsigned int b, double c){
     u = a;
     type = b;
     t = c;
   }
 
-  unsigned int u;     // node index and node event type
+  unsigned long long int u;     // node index and node event type
   unsigned int type;  // type of event, post or repost, 0 or 1
   double t;  // time of event
 
@@ -57,31 +57,31 @@ struct event // node event
 };
 
 
-struct degree // degree distribution FIXME why does removing this slow down execution?
-{
-  degree(){};
-
-  degree(int a, double b){
-    k = a;
-    pk = b;
-  }
-  
-	int k;
-
-	double pk;
-};
-
-
-struct weight // weight distribution FIXME same comment as above
-{
-  weight(){};
-
-  weight(int a, double b){
-    w = a;
-    pw = b;
-  }
-
-	double w, pw;
-};
+//struct degree // degree distribution FIXME why does removing this slow down execution?
+//{
+//  degree(){};
+//
+//  degree(int a, double b){
+//    k = a;
+//    pk = b;
+//  }
+//  
+//	int k;
+//
+//	double pk;
+//};
+//
+//
+//struct weight // weight distribution FIXME same comment as above
+//{
+//  weight(){};
+//
+//  weight(int a, double b){
+//    w = a;
+//    pw = b;
+//  }
+//
+//	double w, pw;
+//};
 
 #endif

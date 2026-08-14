@@ -13,6 +13,11 @@ memedata fitness::samplememepars(const double &t)
   m.wp = wpdist.sample();
   m.wr = wrdist.sample();
   m.wb = wbdist.sample();
+  //m.progeny = 0;
+
+  //m.wr = int(10.0 * m.wr) / 10.0;
+  //cout << m.wr << endl;
+
   return m;
 }
 

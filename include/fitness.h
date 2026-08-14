@@ -84,6 +84,14 @@ class distribution
     lognormal_distribution<double> ldist;
 };
 
+
+struct trajectory
+{
+  int w;
+  vector<vector<double>> rho;
+};
+
+
 class fitness
 {
   public:
@@ -95,15 +103,16 @@ class fitness
 
 		unsigned int u, uage, type;  // gillespie event node index and type
 		double t, tage;  // gillespie event times
-		unsigned int count;  // gillespie counter
+		unsigned long long int count;  // gillespie counter
 
     distribution wrdist, wpdist, wbdist;  // distributions of rates wr, wp and wb
 
-    map<unsigned int, memedata> memes;
+    map<unsigned long long int, memedata> memes;
     set<event> nodeevents, ageevents;
     vector<event> nodeeventsdic;
-		map<unsigned int, event> ageeventsdic;
-    vector<unsigned int> screen;
+		map<unsigned long long int, event> ageeventsdic;
+    vector<unsigned long long int> screen;
+    map<unsigned int, trajectory> straj;  // s(t) trajectories for dominant memes
 
     mt19937 gen;
     exponential_distribution<double> edist;
@@ -115,9 +124,14 @@ class fitness
     void initialiserun();
     void initialisedists();
 
+    void memebirth(int);
+    void memedeath(int);
+    void schedule_nodeevent(int);
     void gillespie();
+
     void gillespie_urn();
     void sanitycheck();
+    void strajcheck();
 
     memedata samplememepars(const double&);
     event sampletimes(const unsigned int &, const double &);
@@ -129,5 +143,7 @@ class fitness
     void print_popularity(map<int, int>, int);
     void print_popularity();
     void print_abundance();
+    void print_si();
+    void print_straj();
 };
 #endif
